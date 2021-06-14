@@ -25,6 +25,8 @@ def ReLU(Z):
     return np.maximum(Z, 0)
 
 def softmax(Z):
+    maxZ = np.max(Z)
+    Z = Z - maxZ
     A = np.exp(Z) / sum(np.exp(Z))
     return A
     
