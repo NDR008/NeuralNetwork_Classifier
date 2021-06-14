@@ -11,20 +11,29 @@ X_train = train_data[1:n]
 _,m_train = X_train.shape
 
 #print(Y_train.shape)
-neurons1 = 40
+neurons1 = 10
 neurons2 = 2  # number of classifications
 
 def init_params():
-    # randomize all around 0 +/-0.5
-    # weight: row x col : to neurons x from input
-    W1 = np.random.rand(neurons1, n-1) -0.5
+    # # randomize all around 0 +/-0.5
+    # # weight: row x col : to neurons x from input
+    # W1 = np.random.rand(neurons1, n-1) -0.5
+    # # bias for each hidden neural
+    # b1 = np.random.rand(neurons1, 1) -0.5
+
+    # # weight: row x col : to neurons x from hidden
+    # W2 = np.random.rand(neurons2, neurons1) -0.5
+    # # bias for each output neuron
+    # b2 = np.random.rand(neurons2, 1) -0.5
+
+    W1 = np.random.randn(neurons1, n-1) * 0.1
     # bias for each hidden neural
-    b1 = np.random.rand(neurons1, 1) -0.5
+    b1 = np.random.randn(neurons1, 1) * 0.1
 
     # weight: row x col : to neurons x from hidden
-    W2 = np.random.rand(neurons2, neurons1) -0.5
+    W2 = np.random.randn(neurons2, neurons1) * 0.1
     # bias for each output neuron
-    b2 = np.random.rand(neurons2, 1) -0.5
+    b2 = np.random.randn(neurons2, 1) * 0.1
 
     return W1, b1, W2, b2
 
@@ -124,7 +133,7 @@ def gradient_descent(X, Y, initial_alpha, iterations):
     return W1, b1, W2, b2
 
 
-W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 1, 20000)
+W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 1, 100)
 
 def make_predictions(X, W1, b1, W2, b2):
     _, _, _, A2 = forward_prop(W1, b1, W2, b2, X)
