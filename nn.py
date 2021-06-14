@@ -32,8 +32,7 @@ def forward_prop(W1, b1, W2, b2, X):
     #Z1 = W1.dot(X) + b1
     Z1 = np.dot(W1, X) + b1
     A1 = ReLU(Z1)
-    Z2 = W2.dot(A1) + b2
-    Z2 = np.dot(W2, A1)
+    Z2 = np.dot(W2, A1) + b2
     A2 = softmax(Z2)
     return Z1, A1, Z2, A2
 
