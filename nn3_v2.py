@@ -1,4 +1,5 @@
 import numpy as np
+from abc import ABC, abstractmethod
 
 training_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
 
@@ -20,7 +21,7 @@ def init_params():
     # W1 = np.random.rand(neurons1, n-1) -0.5
     # # bias for each hidden neural
     # b1 = np.random.rand(neurons1, 1) -0.5
-
+    # # weight: row x col : to neurons x from input
     # # weight: row x col : to neurons x from hidden
     # W2 = np.random.rand(neurons2, neurons1) -0.5
     # # bias for each output neuron
@@ -89,9 +90,7 @@ def backward_prop(Z1, A1, Z2, A2, W1, W2, X, Y):
     dW2 = 1 / m * np.dot(dZ2, A1.T)
     db2 = 1 / m * np.sum(dZ2)
 
-
     dZ1 = np.dot(W2.T, dZ2) * ReLU_deriv(Z1)
-    #dZ1 = np.dot(W2.T, dZ2) * ReLU_deriv(Z1) A1???/
     dW1 = 1 / m * np.dot(dZ1, X.T)
     db1 = 1 / m * np.sum(dZ1)
     a = 1
@@ -165,3 +164,57 @@ for index in range(m):
     if Y_train[index] != pred:
         counter += 1
 print(counter, "from", m)
+
+
+# Class of Activator
+# Number of inputs
+# Forward
+
+class NewronLayer():
+    def __init__ (self, inputs, nodes, activation=0):
+        self.activation = activation    # 0 for ReLU and 1 for SoftMax
+        self.inputs = inputs
+        self.ouputs = nodes
+        if activation == 0:
+            self.activation = ReLU()
+        else:
+            self.activation = SoftMax()
+    
+    def initialize(self, load=''):
+        if len(load) == 0:
+            # # weight: row x col : to neurons x from input
+            # # weight: row x col : to neurons x from hidden
+            self.weight = np.random.randn(self.ouputs, self.inputs) * 0.1
+            self.bias = np.random.randn(self.ouputs, 1) * 0.1
+    
+    def forward(self, input_data, ):
+        self.Z = np.dot(self.weight, input_data) + self.bias
+        self.A = self.activation(self.Z)
+        
+    def backward():
+        pass
+        
+
+class ReLU:
+    def forward(Z):
+        return Z > 0  # A
+    
+    # simple derivative
+    def backward(Z):
+        return Z > 0  # dZ
+
+# special since it will be used on output layer    
+class SoftMax:
+    def forward(Z):
+        exp_term = np.exp(Z) 
+        A = exp_term / sum(np.exp(exp_term))
+        return A
+    
+    # It is said on here that the derivative of the cross-entrop loss function for the softmax function is
+    # predicted_y - target_y
+    # https://peterroelants.github.io/posts/cross-entropy-softmax/
+    
+    def backward(Activated, Target):
+        one_hot_encoded_Target = one_hot(Target)
+        dZ = (Activated - one_hot_encoded_Target)
+        return dZ

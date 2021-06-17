@@ -1,6 +1,6 @@
 import numpy as np
 
-training_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
+training_spam = np.loadtxt(open("data/training_math.csv"), delimiter=",")
 
 train_data = np.array(training_spam)
 train_data = train_data[0:-1]
@@ -11,8 +11,8 @@ X_train = train_data[1:n]
 _,m_train = X_train.shape
 
 #print(Y_train.shape)
-neurons1 = 10
-neurons2 = 2  # number of classifications
+neurons1 = 1000
+neurons2 = 9  # number of classifications
 
 def init_params():
     # # randomize all around 0 +/-0.5
@@ -89,9 +89,7 @@ def backward_prop(Z1, A1, Z2, A2, W1, W2, X, Y):
     dW2 = 1 / m * np.dot(dZ2, A1.T)
     db2 = 1 / m * np.sum(dZ2)
 
-
     dZ1 = np.dot(W2.T, dZ2) * ReLU_deriv(Z1)
-    #dZ1 = np.dot(W2.T, dZ2) * ReLU_deriv(Z1) A1???/
     dW1 = 1 / m * np.dot(dZ1, X.T)
     db1 = 1 / m * np.sum(dZ1)
     a = 1
@@ -127,7 +125,7 @@ def gradient_descent(X, Y, initial_alpha, iterations):
         dW1, db1, dW2, db2, cl = backward_prop(Z1, A1, Z2, A2, W1, W2, X, Y)
         W1, b1, W2, b2 = update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha)
         if i % 1000 == 0:
-            alpha = initial_alpha * (1.0 / (1 + decay_rate * i))
+            #alpha = initial_alpha * (1.0 / (1 + decay_rate * i))
             predictions = get_predictions(A2)
             accuracy = get_accuracy(predictions, Y)
             mismatch = get_mismatch(predictions, Y)
@@ -135,7 +133,7 @@ def gradient_descent(X, Y, initial_alpha, iterations):
     return W1, b1, W2, b2
 
 
-W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 1, 100)
+W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 0.1, 10000000)
 
 def make_predictions(X, W1, b1, W2, b2):
     _, _, _, A2 = forward_prop(W1, b1, W2, b2, X)
@@ -146,11 +144,12 @@ def val_prediction(index, W1, b1, W2, b2):
     #print(X_train[:, index, None])
     prediction, A2 = make_predictions(X_train[:, index, None], W1, b1, W2, b2)
     label = Y_train[index]
-    print(index, "Prediction: ", prediction, "\t", "Label: ", label, "\t", "A2: ", A2[int(A2[0] > A2[1])])
+    print(index, "Prediction: ", prediction, "\t", "Label: ", label, "\t", "A2: ", A2.T)
+    #print(A2)
     return prediction
 
 
-training_spam = np.loadtxt(open("data/training_spam.csv"), delimiter=",")
+training_spam = np.loadtxt(open("data/testing_math.csv"), delimiter=",")
 train_data = np.array(training_spam)
 #train_data = train_data[300:500]
 m, n = train_data.shape
