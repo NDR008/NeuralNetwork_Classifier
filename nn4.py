@@ -11,7 +11,7 @@ X_train = train_data[1:n]
 _,m_train = X_train.shape
 
 #print(Y_train.shape)
-neurons1 = 1000
+neurons1 = 100
 neurons2 = 9  # number of classifications
 
 def init_params():

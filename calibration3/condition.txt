@@ -1,0 +1,5 @@
+        classifier.train(50000, 0.01, 0, train_data, test_data)
+
+layer0_nodes = 20
+NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
+NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  

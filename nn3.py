@@ -3,7 +3,7 @@ import numpy as np
 training_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
 
 train_data = np.array(training_spam)
-train_data = train_data[0:-1]
+#train_data = train_data[0:1000]
 m, n = train_data.shape
 train_data = train_data.T
 Y_train = train_data[0]
@@ -11,7 +11,7 @@ X_train = train_data[1:n]
 _,m_train = X_train.shape
 
 #print(Y_train.shape)
-neurons1 = 10
+neurons1 = 50
 neurons2 = 2  # number of classifications
 
 def init_params():
@@ -132,28 +132,38 @@ def gradient_descent(X, Y, initial_alpha, iterations):
             accuracy = get_accuracy(predictions, Y)
             mismatch = get_mismatch(predictions, Y)
             print("Iteration: ", i, "accuracy ", accuracy, "mismatch", mismatch, "cross-loss", cl, "learning_rate", alpha)
+
+
+    np.save('W1.npy', W1)
+    np.save('b1.npy', b1)
+    np.save('W2.npy', W2)
+    np.save('b2.npy', b2)
+    #print(np.shape(W1), np.shape(W2))
+    #print(np.shape(b1), np.shape(b2))
     return W1, b1, W2, b2
 
 
-W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 1, 100)
+W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 1, 1000)
 
 def make_predictions(X, W1, b1, W2, b2):
-    _, _, _, A2 = forward_prop(W1, b1, W2, b2, X)
+    Z1, A1, Z2, A2 = forward_prop(W1, b1, W2, b2, X)
     predictions = get_predictions(A2)
-    return predictions, A2
+    return predictions, A2, A1
  
 def val_prediction(index, W1, b1, W2, b2):
     #print(X_train[:, index, None])
-    prediction, A2 = make_predictions(X_train[:, index, None], W1, b1, W2, b2)
+    prediction, A2, A1 = make_predictions(X_train[:, index, None], W1, b1, W2, b2)
     label = Y_train[index]
     print(index, "Prediction: ", prediction, "\t", "Label: ", label, "\t", "A2: ", A2[int(A2[0] > A2[1])])
+    #print(index, "Prediction: ", prediction, "\t", "Label: ", label, "\t", "A2: ", A2, "\t", "A1: ", A1)
     return prediction
 
 
 training_spam = np.loadtxt(open("data/training_spam.csv"), delimiter=",")
 train_data = np.array(training_spam)
-#train_data = train_data[300:500]
+#train_data = train_data[0:10]
 m, n = train_data.shape
+print(n)
 train_data = train_data.T
 Y_train = train_data[0]
 X_train = train_data[1:n]
@@ -161,7 +171,11 @@ _,m_train = X_train.shape
 
 counter = 0
 for index in range(m):
-    pred = val_prediction(index, W1, b1, W2, b2)
-    if Y_train[index] != pred:
-        counter += 1
+   pred = val_prediction(index, W1, b1, W2, b2)
+   if Y_train[index] != pred:
+       counter += 1
 print(counter, "from", m)
+
+Z1, A1, Z2, A2 = forward_prop(W1, b1, W2, b2, X_train)
+#print(np.shape(A2),np.shape(one_hot(Y_train)))
+#print(np.shape(W1), np.shape(X_train))

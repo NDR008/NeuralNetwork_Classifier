@@ -38,16 +38,10 @@ def init_params():
 
     return W1, b1, W2, b2
 
-def ReLU(Z):
-    return np.maximum(Z, 0)
+
 
 # if ReLU(Z) was used, then and the output was negative,
 # we lost measure of how wrong it was (or if all were negative)
-def softmax(Z):
-    maxZ = np.max(Z)
-    # Z = Z - maxZ # to avoid exploding
-    A = np.exp(Z) / sum(np.exp(Z))
-    return A
 
 def forward_prop(W1, b1, W2, b2, X):
     Z1 = np.dot(W1, X) + b1
@@ -59,13 +53,7 @@ def forward_prop(W1, b1, W2, b2, X):
 def ReLU_deriv(Z):
     return Z > 0
 
-def one_hot(Y):
-    Y = Y.astype(int)
-    # if there are 3 possible values
-    # vector in row0 = cases for value 0
-    # vector in row1 = cases for value 1
-    # vector in row2 = cases for value 2
-    one_hot_Y = np.zeros((Y.size, int(Y.max()+1)))
+
     
     x = np.arange(Y.size)
     one_hot_Y[x, Y] = 1
@@ -171,31 +159,47 @@ print(counter, "from", m)
 # Forward
 
 class NewronLayer():
-    def __init__ (self, inputs, nodes, activation=0):
-        self.activation = activation    # 0 for ReLU and 1 for SoftMax
+    def __init__ (self, inputs, nodes, activation_func):
+        self.activation = activation_func    # 0 for ReLU and 1 for SoftMax
         self.inputs = inputs
         self.ouputs = nodes
-        if activation == 0:
-            self.activation = ReLU()
-        else:
-            self.activation = SoftMax()
+        # # weight: row x col : to neurons x from input
+        # # weight: row x col : to neurons x from hidden
+        self.weight = np.random.randn(self.ouputs, self.inputs) * 0.1
+        self.bias = np.random.randn(self.ouputs, 1) * 0.1
     
-    def initialize(self, load=''):
-        if len(load) == 0:
-            # # weight: row x col : to neurons x from input
-            # # weight: row x col : to neurons x from hidden
-            self.weight = np.random.randn(self.ouputs, self.inputs) * 0.1
-            self.bias = np.random.randn(self.ouputs, 1) * 0.1
+    def load(self, load=''):
+        pass
     
-    def forward(self, input_data, ):
+    def forward(self, input_data):
         self.Z = np.dot(self.weight, input_data) + self.bias
-        self.A = self.activation(self.Z)
+        self.A = self.activation(self.Z)        
+            
+    
+class NeuralNetwork():
+    def __init__(self, input_size, layers=(1,10), output = 2):
         
-    def backward():
         pass
         
+    def train(self, training_data):
+        # need to think of how to use this...
+        training_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
+        train_data = np.array(training_spam)
+        train_data = train_data[0:-1]
+        m, n = train_data.shape
+        train_data = train_data.T
+        Y_train = train_data[0]
+        X_train = train_data[1:n]
+        _,m_train = X_train.shape
+    
+    # def predict
+        # this needs to return the prediction
+        
+    def get_predictions(self):
+        return np.argmax(self, 0)
 
-class ReLU:
+        
+class ReLU():
     def forward(Z):
         return Z > 0  # A
     
@@ -204,7 +208,7 @@ class ReLU:
         return Z > 0  # dZ
 
 # special since it will be used on output layer    
-class SoftMax:
+class SoftMax():
     def forward(Z):
         exp_term = np.exp(Z) 
         A = exp_term / sum(np.exp(exp_term))
@@ -214,7 +218,19 @@ class SoftMax:
     # predicted_y - target_y
     # https://peterroelants.github.io/posts/cross-entropy-softmax/
     
-    def backward(Activated, Target):
-        one_hot_encoded_Target = one_hot(Target)
-        dZ = (Activated - one_hot_encoded_Target)
-        return dZ
+    def backward(self, output, input, target):
+        encoded_target = self.one_hot(target)
+
+        dZ = (output - encoded_target)
+        dW = 1 / m * np.dot(dZ, input.T)
+        db = 1 / m * np.sum(dZ)
+        return dZ, dW, db
+        
+    def one_hot(target):
+        target = target.astype(int)
+        # if there are 3 possible values
+        # vector in row0 = cases for value 0
+        # vector in row1 = cases for value 1
+        # vector in row2 = cases for value 2
+        # and so forth
+        encoded_target = np.zeros((target.size, int(target.max()+1)))
