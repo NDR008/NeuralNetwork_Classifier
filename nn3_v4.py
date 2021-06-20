@@ -1,5 +1,5 @@
 import numpy as np
-debug = 1  # global flag to turn on prints and plots
+debug = 0  # global flag to turn on prints and plots
 train = 1
 
 class NewronLayer():
@@ -23,6 +23,7 @@ class NewronLayer():
         self.Z = np.dot(self.weight, self.input_data) + self.bias
         if self.final_layer:
             maxZ = np.max(self.Z)  # avoids occasional overflow warning
+            # maxZ = 0
             self.A = np.exp(self.Z-maxZ) / sum(np.exp(self.Z-maxZ))  # softmax
             self.get_predictions()
         else:
@@ -61,7 +62,7 @@ class NewronLayer():
 
     def Softmax_backward(self, target):
         self.encode_target(target)
-        self.dZ = (self.A - self.encoded_target)  # dL/dA simplified to A - y, this is a 2D matrix (even if A[0] = 1-A[1])
+        self.dZ = (self.A - self.encoded_target)  # simplified to A - y, this is a 2D matrix (even if A[0] = 1-A[1])
         self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
         self.db = 1 / self.train_samples* np.sum(self.dZ)
     
@@ -243,16 +244,16 @@ def create_classifier(receptors=54, mode=0):
         NN_stucture.append(NewronLayer(2, 4, w_data='tuned/W-1-4000.npy', b_data='tuned/B-1-4000.npy', output=True))  
 
     elif mode == 1:
-        layer0_nodes = 30
-        layer1_nodes = 50
-        layer2_nodes = 10
+        layer0_nodes = 50
+        layer1_nodes = 500
+        layer2_nodes = 50
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  # first hidden
         NN_stucture.append(NewronLayer(layer1_nodes, layer0_nodes))  # second hidden
         NN_stucture.append(NewronLayer(layer2_nodes, layer1_nodes))  # second hidden
         NN_stucture.append(NewronLayer(2, layer2_nodes, output=True))  # output
 
     else:
-        layer0_nodes = 50
+        layer0_nodes = 15
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
         NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
 
@@ -263,7 +264,7 @@ classifier = create_classifier(mode=2)
 # classifier.train(500, 0.8, 0.001, train_data, test_data)
 
 ## all for testing
-if debug:
+if train:  
     training_spam = np.loadtxt(open("data/training_spam.csv"), delimiter=",")
     test_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
     train_data = np.array(training_spam)
@@ -274,9 +275,7 @@ if debug:
     total = len(Y_train.T)
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("at first", correct, total)
-
-    if train:  
-        classifier.train(500000, 0.01, 0, train_data, test_data)
-
-        correct = np.count_nonzero(Y_train - classifier.predict(X_train))
-        print("finally", correct, total)
+    
+    classifier.train(50000, 1, 0.05, train_data, test_data)
+    correct = np.count_nonzero(Y_train - classifier.predict(X_train))
+    print("finally", correct, total)
