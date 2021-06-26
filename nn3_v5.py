@@ -1,23 +1,26 @@
 import numpy as np
 debug = 1  # global flag to turn on prints and plots
 train = 1
-save = 0
+save = 1
 
 class NewronLayer():
-    def __init__ (self, nodes=0, inputs=0, w_data='', b_data='', output=False):
-        # if output == True then SoftMax is used
+    def __init__ (self, nodes=1, inputs=1, w_data='', b_data='', output=False):
         self.train_samples = None
-        self.inputs = int(inputs)
-        self.nodes = int(nodes)
         self.final_layer = output
+        # if output == True then SoftMax is used
         # # weight: row x col : to neurons x from input
         # # weight: row x col : to neurons x from hidden
-        np.random.seed(0)  # eliminate seed variance
+        # np.random.seed(0)  # eliminate seed variance
         if len(w_data) == 0:
+            self.inputs = int(inputs)
+            self.nodes = int(nodes)
             self.weight = np.random.randn(self.nodes, self.inputs) * 0.1
             self.bias = np.random.randn(self.nodes, 1) * 0.1  # 0 produces the same effect too
         else:
             self.weight = np.load(w_data).copy()
+            (a,b) = np.shape(self.weight)
+            self.inputs = int(b)
+            self.nodes = int(a)
             self.bias = np.load(b_data).copy()
     
     def forward(self, data):
@@ -80,8 +83,9 @@ class NewronLayer():
                
         
     def Sigmoid_backward(self, target):
-        #self.encode_target(target)
-        self.dZ = (self.A - target)  # simplified to A - y
+        # sig_der = 1 / (1 + np.exp(-1*self.A))
+        # self.dZ = (self.A - target) * sig_der
+        self.dZ = (self.A - target)  
         self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
         self.db = 1 / self.train_samples* np.sum(self.dZ)
     
@@ -97,9 +101,6 @@ class NewronLayer():
         self.weight = self.weight - alpha * self.dW
         self.bias = self.bias - alpha * self.db
 
-
-#layer1 = NewronLayer(4, n-1, w_data='W1.npy', b_data='b1.npy')
-#layer2 = NewronLayer(2, 4, w_data='W2.npy', b_data='b2.npy', output=True)
 
 class SpamClassifier:
     def __init__(self, NN_stucture):
@@ -169,7 +170,7 @@ class SpamClassifier:
             for layer_index in range(self.layer_qty):
                 self.layers[layer_index].update(alpha)
                 
-            if epoch % 100 == 0:
+            if epoch % 10 == 0:
                 # stepwise decay (decay every 100 epochs)
                 alpha = initial_alpha * (1.0 / (1 + decay * epoch))
 
@@ -184,13 +185,13 @@ class SpamClassifier:
             if not debug:
                 continue
             
-            if save and epoch % 10000 == 0:
+            if save and epoch % 100 == 0:
                 for layer_index in range(self.layer_qty):
                     nameW = "calibration/W-" + str(layer_index) + "-" + str(epoch)
                     nameB = "calibration/B-" + str(layer_index) + "-" + str(epoch)
                     np.save(nameW, self.layers[layer_index].weight)
                     np.save(nameB, self.layers[layer_index].bias)
-            if debug and epoch % 500 == 0:
+            if debug and epoch % 50 == 0:
                 print(epoch, "train", np.count_nonzero(Y_train - training_pred), "test", np.count_nonzero(Y_test - test_pred))
                             
             
@@ -246,14 +247,20 @@ class SpamClassifier:
         return prediction
 
 
+
 def create_classifier(receptors=54, mode=0):
     NN_stucture = []
 
     if mode == 0:
-        NN_stucture.append(NewronLayer(4, receptors, w_data='tuned/W-0-4000.npy', b_data='tuned/B-0-4000.npy'))  
-        NN_stucture.append(NewronLayer(2, 4, w_data='tuned/W-1-4000.npy', b_data='tuned/B-1-4000.npy', output=True))  
+        NN_stucture.append(NewronLayer(w_data='tuned/W-0-4000.npy', b_data='tuned/B-0-4000.npy'))  
+        NN_stucture.append(NewronLayer(w_data='tuned/W-1-4000.npy', b_data='tuned/B-1-4000.npy', output=True))  
+    
+    if mode == 1:
+        NN_stucture.append(NewronLayer(w_data='W1.npy', b_data='b1.npy'))  
+        NN_stucture.append(NewronLayer(w_data='W2.npy', b_data='b2.npy', output=True))  
 
-    elif mode == 1:
+    # Hidden1(ReLu, 40 nodes) > Hidden1(ReLu, 30 nodes) > Output(SoftMax, 2 nodes)
+    elif mode == 2:
         layer0_nodes = 40
         layer1_nodes = 30
         layer2_nodes = 20
@@ -261,20 +268,23 @@ def create_classifier(receptors=54, mode=0):
         NN_stucture.append(NewronLayer(layer1_nodes, layer0_nodes))  # second hidden
         NN_stucture.append(NewronLayer(layer2_nodes, layer1_nodes))  # second hidden
         NN_stucture.append(NewronLayer(2, layer2_nodes, output=True))  # output
-        
-    elif mode == 2:
-        layer0_nodes = 1
+    
+    # Hidden1(ReLu, 4 nodes) > Output(Sigmoid, 1 nodes)        
+    elif mode == 3:
+        layer0_nodes = 4
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
         NN_stucture.append(NewronLayer(1, layer0_nodes, output=True))      
     
-    elif mode == 3:
-        NN_stucture.append(NewronLayer(2, receptors, output=True))      
-
+    # Output(Sigmoid, 1 nodes)        
     elif mode == 4:
+        NN_stucture.append(NewronLayer(1, receptors, output=True))      
+
+    # Hidden1(ReLu, 40 nodes) > Hidden1(ReLu, 30 nodes) > Output(SoftMax, 2 nodes)
+    elif mode == 5:
         layer0_nodes = receptors * 2
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
         NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
-
+        
     else:
         layer0_nodes = 20
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
@@ -283,7 +293,7 @@ def create_classifier(receptors=54, mode=0):
     classifier = SpamClassifier(NN_stucture)
     return classifier
 
-classifier = create_classifier(mode=3)  
+classifier = create_classifier(mode=99)  
 # classifier.train(500, 0.8, 0.001, train_data, test_data)
 
 ## all for testing
@@ -291,7 +301,7 @@ if train:
     training_spam = np.loadtxt(open("data/training_spam.csv"), delimiter=",")
     test_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
     train_data = np.array(training_spam)
-    test_data = np.array(test_spam)\
+    test_data = np.array(test_spam)
         
     X_train = train_data[:,1:]
     Y_train = train_data[:, 0]
@@ -300,15 +310,21 @@ if train:
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("at first", correct, total)
     
-    classifier.train(400, 0.9, 0.001, train_data, test_data)
-    #classifier.train(150000, 0.01, 0, test_data, train_data) # sanity opposite check
+    classifier.train(5000, 1, 0.001, train_data, test_data)
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("finally", correct, total)
     
+        
+test_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
+test_data = np.array(test_spam)
+
+X_test = test_data[:,1:]
+Y_test = test_data[:, 0]
+total = len(Y_test.T)
+
+
+correct = np.count_nonzero(Y_test - classifier.predict(X_test))
+print("test ", correct, total)
     
-    X_test = test_data[:,1:]
-    Y_test = test_data[:, 0]
-    total = len(Y_test.T)
-    
-    correct = np.count_nonzero(Y_test - classifier.predict(X_test))
-    print("test ", correct, total)
+
+

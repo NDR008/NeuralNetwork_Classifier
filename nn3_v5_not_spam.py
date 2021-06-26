@@ -80,8 +80,9 @@ class NewronLayer():
                
         
     def Sigmoid_backward(self, target):
-        sig_der = 1 / (1 + np.exp(-1*self.A))
-        self.dZ = (self.A - target)  # amplify dZ when self.A is close to 0.
+        # sig_der = 1 / (1 + np.exp(-1*self.A))
+        # self.dZ = (self.A - target) * sig_der
+        self.dZ = (self.A - target)  
         self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
         self.db = 1 / self.train_samples* np.sum(self.dZ)
     
