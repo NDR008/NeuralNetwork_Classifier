@@ -12,9 +12,10 @@ class NewronLayer():
         self.final_layer = output
         # # weight: row x col : to neurons x from input
         # # weight: row x col : to neurons x from hidden
+        np.random.seed(0)  # eliminate seed variance
         if len(w_data) == 0:
             self.weight = np.random.randn(self.nodes, self.inputs) * 0.1
-            self.bias = np.random.randn(self.nodes, 1) * 0.1
+            self.bias = np.random.randn(self.nodes, 1) * 0.1  # 0 produces the same effect too
         else:
             self.weight = np.load(w_data).copy()
             self.bias = np.load(b_data).copy()
@@ -22,11 +23,15 @@ class NewronLayer():
     def forward(self, data):
         self.input_data = data.copy()  # only useful for training or debug
         self.Z = np.dot(self.weight, self.input_data) + self.bias
-        if self.final_layer:
+        if self.final_layer and self.nodes > 1:  # means  softmax for multi-classification
             maxZ = np.max(self.Z)  # avoids occasional overflow warning
             # maxZ = 0
             self.A = np.exp(self.Z-maxZ) / sum(np.exp(self.Z-maxZ))  # softmax
             self.get_predictions()
+        elif self.final_layer and self.nodes == 1:  # means sigmoid for binary exclusive classification
+            #maxZ = np.max(self.Z) 
+            self.A = 1 / (1 + np.exp(-1*self.Z))
+            self.get_predictions()            
         else:
             # Use ReLU as activation function
             # https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6
@@ -35,15 +40,21 @@ class NewronLayer():
             self.A = np.maximum(self.Z, 0)
 
     def backward(self, target=None):
-        if self.final_layer:
+        if self.final_layer and self.nodes > 1:
             # target is the training target
             self.Softmax_backward(target)
+        elif self.final_layer and self.nodes == 1:
+            # target is the training target
+            self.Sigmoid_backward(target)
         else:
             # target is the next layer
             self.ReLU_Backward(target)
 
     def get_predictions(self):
-        self.predictions =  (np.argmax(self.A, 0))
+        if self.nodes > 1:
+            self.predictions = (np.argmax(self.A, 0))
+        elif self.nodes == 1:
+            self.predictions = self.A >= 0.5
     
     # this function is not actually necessary however, the code is generalised such that it can 
     # categorise for more than 2 categories.
@@ -64,6 +75,13 @@ class NewronLayer():
     def Softmax_backward(self, target):
         self.encode_target(target)
         self.dZ = (self.A - self.encoded_target)  # simplified to A - y, this is a 2D matrix (even if A[0] = 1-A[1])
+        self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
+        self.db = 1 / self.train_samples* np.sum(self.dZ)
+               
+        
+    def Sigmoid_backward(self, target):
+        #self.encode_target(target)
+        self.dZ = (self.A - target)  # simplified to A - y
         self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
         self.db = 1 / self.train_samples* np.sum(self.dZ)
     
@@ -150,7 +168,10 @@ class SpamClassifier:
 
             for layer_index in range(self.layer_qty):
                 self.layers[layer_index].update(alpha)
-            alpha = initial_alpha * (1.0 / (1 + decay * epoch))
+                
+            if epoch % 100 == 0:
+                # stepwise decay (decay every 100 epochs)
+                alpha = initial_alpha * (1.0 / (1 + decay * epoch))
 
             # test with test data
             for layer_index in range(self.layer_qty):
@@ -163,13 +184,13 @@ class SpamClassifier:
             if not debug:
                 continue
             
-            if epoch % 5000 == 0:
-                if save:
-                    for layer_index in range(self.layer_qty):
-                        nameW = "calibration/W-" + str(layer_index) + "-" + str(epoch)
-                        nameB = "calibration/B-" + str(layer_index) + "-" + str(epoch)
-                        np.save(nameW, self.layers[layer_index].weight)
-                        np.save(nameB, self.layers[layer_index].bias)
+            if save and epoch % 10000 == 0:
+                for layer_index in range(self.layer_qty):
+                    nameW = "calibration/W-" + str(layer_index) + "-" + str(epoch)
+                    nameB = "calibration/B-" + str(layer_index) + "-" + str(epoch)
+                    np.save(nameW, self.layers[layer_index].weight)
+                    np.save(nameB, self.layers[layer_index].bias)
+            if debug and epoch % 500 == 0:
                 print(epoch, "train", np.count_nonzero(Y_train - training_pred), "test", np.count_nonzero(Y_test - test_pred))
                             
             
@@ -204,27 +225,14 @@ class SpamClassifier:
             fig.tight_layout()
             fig.savefig("calibration/entropy.png")
 
-            print(accur_y3[-1], accur_test_y3[-1])
+            print("train accuracy", accur_y3[-1], "test accuracy", accur_test_y3[-1])
             
+            fig_alpha, alpha_axis= plt.subplots()
+            alpha_axis.plot(epoch_x, alpha_y)
+            alpha_axis.set_ylabel('Alpha Learning Rate')
             
-            
+            fig_alpha.savefig("calibration/alpha.png")
 
-            # fig2, ax3 = plt.subplots()
-            # color = 'tab:green'
-            # ax3.set_xlabel('Cross-Entropy Loss')
-            # ax3.set_ylabel('Accuracy', color=color)
-            # ax2.tick_params(axis='y', labelcolor=color)
-            # ax3.plot(ce_y2, accur_y3, color=color)
-            # plt.show()
-            #
-            # fig3, ax4 = plt.subplots()
-            # color = 'tab:purple'
-            # ax4.set_xlabel('epoch (cycle)')
-            # ax4.set_ylabel('Alpha', color=color)
-            # ax4.plot(epoch_x, alpha_y, color=color)
-            # ax4.tick_params(axis='y', labelcolor=color)
-            # fig.tight_layout()
-            # plt.show()
 
 
     def predict(self, data):
@@ -246,23 +254,36 @@ def create_classifier(receptors=54, mode=0):
         NN_stucture.append(NewronLayer(2, 4, w_data='tuned/W-1-4000.npy', b_data='tuned/B-1-4000.npy', output=True))  
 
     elif mode == 1:
-        layer0_nodes = 50
-        layer1_nodes = 500
-        layer2_nodes = 50
+        layer0_nodes = 40
+        layer1_nodes = 30
+        layer2_nodes = 20
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  # first hidden
         NN_stucture.append(NewronLayer(layer1_nodes, layer0_nodes))  # second hidden
         NN_stucture.append(NewronLayer(layer2_nodes, layer1_nodes))  # second hidden
         NN_stucture.append(NewronLayer(2, layer2_nodes, output=True))  # output
+        
+    elif mode == 2:
+        layer0_nodes = 1
+        NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
+        NN_stucture.append(NewronLayer(1, layer0_nodes, output=True))      
+    
+    elif mode == 3:
+        NN_stucture.append(NewronLayer(2, receptors, output=True))      
+
+    elif mode == 4:
+        layer0_nodes = receptors * 2
+        NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
+        NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
 
     else:
-        layer0_nodes = 15
+        layer0_nodes = 20
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
         NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
 
     classifier = SpamClassifier(NN_stucture)
     return classifier
 
-classifier = create_classifier(mode=2)  
+classifier = create_classifier(mode=3)  
 # classifier.train(500, 0.8, 0.001, train_data, test_data)
 
 ## all for testing
@@ -270,14 +291,24 @@ if train:
     training_spam = np.loadtxt(open("data/training_spam.csv"), delimiter=",")
     test_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
     train_data = np.array(training_spam)
-    test_data = np.array(test_spam)
+    test_data = np.array(test_spam)\
+        
     X_train = train_data[:,1:]
     Y_train = train_data[:, 0]
-
     total = len(Y_train.T)
+    
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("at first", correct, total)
     
-    classifier.train(500000, 0.01, 0, train_data, test_data)
+    classifier.train(400, 0.9, 0.001, train_data, test_data)
+    #classifier.train(150000, 0.01, 0, test_data, train_data) # sanity opposite check
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("finally", correct, total)
+    
+    
+    X_test = test_data[:,1:]
+    Y_test = test_data[:, 0]
+    total = len(Y_test.T)
+    
+    correct = np.count_nonzero(Y_test - classifier.predict(X_test))
+    print("test ", correct, total)
