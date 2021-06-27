@@ -57,7 +57,7 @@ class NewronLayer():
         if self.nodes > 1:
             self.predictions = (np.argmax(self.A, 0))
         elif self.nodes == 1:
-            self.predictions = self.A >= 0.5
+            self.predictions = self.A > 0.5
     
     # this function is not actually necessary however, the code is generalised such that it can 
     # categorise for more than 2 categories.
@@ -75,17 +75,17 @@ class NewronLayer():
         # Best in depth explanation: 
         # https://levelup.gitconnected.com/killer-combo-softmax-and-cross-entropy-5907442f60ba
 
-    def Softmax_backward(self, target):
-        self.encode_target(target)
-        self.dZ = (self.A - self.encoded_target)  # simplified to A - y, this is a 2D matrix (even if A[0] = 1-A[1])
+    def Softmax_backward(self, target_vector):
+        self.encode_target(target_vector)
+        self.dZ = (self.A - self.encoded_target)  
+        # simplified to A - y, this is a 2D matrix (even if A[0] = 1-A[1])
         self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
         self.db = 1 / self.train_samples* np.sum(self.dZ)
-               
         
-    def Sigmoid_backward(self, target):
-        # sig_der = 1 / (1 + np.exp(-1*self.A))
-        # self.dZ = (self.A - target) * sig_der
-        self.dZ = (self.A - target)  
+    def Sigmoid_backward(self, target_vector):
+        self.dZ = (self.A - target_vector)  
+        # not totally sure the shortcut is allowed but supported by
+        # https://peterroelants.github.io/posts/cross-entropy-logistic/
         self.dW = 1 / self.train_samples * np.dot(self.dZ, self.input_data.T)
         self.db = 1 / self.train_samples* np.sum(self.dZ)
     
@@ -170,9 +170,7 @@ class SpamClassifier:
             for layer_index in range(self.layer_qty):
                 self.layers[layer_index].update(alpha)
                 
-            if epoch % 10 == 0:
-                # stepwise decay (decay every 100 epochs)
-                alpha = initial_alpha * (1.0 / (1 + decay * epoch))
+            alpha = initial_alpha * (1.0 / (1 + decay * epoch))
 
             # test with test data
             for layer_index in range(self.layer_qty):
@@ -185,7 +183,7 @@ class SpamClassifier:
             if not debug:
                 continue
             
-            if save and epoch % 100 == 0:
+            if save and epoch % 500 == 0:
                 for layer_index in range(self.layer_qty):
                     nameW = "calibration/W-" + str(layer_index) + "-" + str(epoch)
                     nameB = "calibration/B-" + str(layer_index) + "-" + str(epoch)
@@ -252,48 +250,60 @@ def create_classifier(receptors=54, mode=0):
     NN_stucture = []
 
     if mode == 0:
-        NN_stucture.append(NewronLayer(w_data='tuned/W-0-4000.npy', b_data='tuned/B-0-4000.npy'))  
-        NN_stucture.append(NewronLayer(w_data='tuned/W-1-4000.npy', b_data='tuned/B-1-4000.npy', output=True))  
-    
-    if mode == 1:
-        NN_stucture.append(NewronLayer(w_data='W1.npy', b_data='b1.npy'))  
-        NN_stucture.append(NewronLayer(w_data='W2.npy', b_data='b2.npy', output=True))  
+        NN_stucture.append(NewronLayer(w_data='tuned/1/W-0-4000.npy', b_data='tuned/1/B-0-4000.npy'))  
+        NN_stucture.append(NewronLayer(w_data='tuned/1/W-1-4000.npy', b_data='tuned/1/B-1-4000.npy', output=True))  
+        
+    elif mode == 1:
+        NN_stucture.append(NewronLayer(w_data='tuned/2/W-0-100.npy', b_data='tuned/2/B-0-100.npy', output=True))  
+
+    elif mode == 2:
+        NN_stucture.append(NewronLayer(w_data='tuned/3/W-0-6000.npy', b_data='tuned/3/B-0-6000.npy'))    # first hidden
+        NN_stucture.append(NewronLayer(w_data='tuned/3/W-1-6000.npy', b_data='tuned/3/B-1-6000.npy', output=True))    # second hidden
+
+    # Hidden1(ReLu, 8 nodes) > Output(Sigmoid, 1 nodes)        
+    elif mode == 10:
+        layer0_nodes = 8
+        NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
+        NN_stucture.append(NewronLayer(1, layer0_nodes, output=True))      
 
     # Hidden1(ReLu, 40 nodes) > Hidden1(ReLu, 30 nodes) > Output(SoftMax, 2 nodes)
-    elif mode == 2:
-        layer0_nodes = 40
-        layer1_nodes = 30
-        layer2_nodes = 20
+    elif mode == 11:
+        layer0_nodes = 54
+        layer1_nodes = 54
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  # first hidden
         NN_stucture.append(NewronLayer(layer1_nodes, layer0_nodes))  # second hidden
-        NN_stucture.append(NewronLayer(layer2_nodes, layer1_nodes))  # second hidden
-        NN_stucture.append(NewronLayer(2, layer2_nodes, output=True))  # output
+        NN_stucture.append(NewronLayer(1, layer1_nodes, output=True))  # output
     
     # Hidden1(ReLu, 4 nodes) > Output(Sigmoid, 1 nodes)        
-    elif mode == 3:
+    elif mode == 12:
         layer0_nodes = 4
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
         NN_stucture.append(NewronLayer(1, layer0_nodes, output=True))      
     
     # Output(Sigmoid, 1 nodes)        
-    elif mode == 4:
-        NN_stucture.append(NewronLayer(1, receptors, output=True))      
+    elif mode == 21:
+        NN_stucture.append(NewronLayer(1, receptors, output=True))
+
+    # Output(Softmax, 1 nodes)
+    elif mode ==22:
+        NN_stucture.append(NewronLayer(2, receptors, output=True))
 
     # Hidden1(ReLu, 40 nodes) > Hidden1(ReLu, 30 nodes) > Output(SoftMax, 2 nodes)
-    elif mode == 5:
+    elif mode == 31:
         layer0_nodes = receptors * 2
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
-        NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
+        NN_stucture.append(NewronLayer(1, layer0_nodes, output=True))  
         
+    # Hidden1(ReLu, 20 nodes) > Output(SoftMax, 2 nodes)            
     else:
-        layer0_nodes = 20
+        layer0_nodes = 50
         NN_stucture.append(NewronLayer(layer0_nodes, receptors))  
         NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
 
     classifier = SpamClassifier(NN_stucture)
     return classifier
 
-classifier = create_classifier(mode=99)  
+classifier = create_classifier(mode=99)
 # classifier.train(500, 0.8, 0.001, train_data, test_data)
 
 ## all for testing
@@ -310,7 +320,7 @@ if train:
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("at first", correct, total)
     
-    classifier.train(5000, 1, 0.001, train_data, test_data)
+    classifier.train(10000, 0.1, 0.1, train_data, test_data)
     correct = np.count_nonzero(Y_train - classifier.predict(X_train))
     print("finally", correct, total)
     
