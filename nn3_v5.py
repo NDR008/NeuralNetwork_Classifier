@@ -301,6 +301,10 @@ def create_classifier(receptors=54, mode=0):
         NN_stucture.append(NewronLayer(2, layer0_nodes, output=True))  
 
     classifier = SpamClassifier(NN_stucture)
+    
+    if mode > 9:
+        classifier.train(4000, 1, 0.1, training_spam, testing_spam)
+    
     return classifier
 
 classifier = create_classifier(mode=99)
@@ -309,9 +313,9 @@ classifier = create_classifier(mode=99)
 ## all for testing
 if train:  
     training_spam = np.loadtxt(open("data/training_spam.csv"), delimiter=",")
-    test_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
+    testing_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",")
     train_data = np.array(training_spam)
-    test_data = np.array(test_spam)
+    test_data = np.array(testing_spam)
         
     X_train = train_data[:,1:]
     Y_train = train_data[:, 0]
