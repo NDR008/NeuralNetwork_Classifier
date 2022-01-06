@@ -19,7 +19,7 @@ NN_stucture.append(NewronLayer(1, layer1_nodes, output=True))   # output
 It achieved 92% accuracy with decay learning and stopped at around epoch 6000.
 
 ### Video Explanation:
-[![Final result](./presentation/Presentation.jpg)]({https://youtu.be/H5RP_Orvp-k} "Neural Network Presentation")
+[![Final result](./presentation/Presentation.jpg)](https://youtu.be/H5RP_Orvp-k "Neural Network Presentation")
 
 Note: I do not know why literature do not call the first layer the receptor of the hidden layer (or call the first hidden layer the first layer).
 What literature calls the input layer is just receptors to the first hidden layer or the output layer if a single layer.  
